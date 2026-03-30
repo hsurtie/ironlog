@@ -408,6 +408,18 @@ canvas{display:block;}
 
   <!-- ══════════════════════════════════════ EXPORT TAB ══ -->
   <div class="view" id="view-export">
+    <div class="section-title">Schedule settings</div>
+    <div style="background:var(--iron-card);border-radius:var(--r-lg);border:1px solid var(--iron-light);padding:16px;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px;">Workout days</div>
+      <div style="font-size:12px;color:var(--chalk-dim);font-family:var(--font-m);margin-bottom:14px;">Tue · Thu · Weekend</div>
+      <div style="font-size:11px;font-family:var(--font-m);color:var(--chalk-dim);letter-spacing:0.5px;margin-bottom:8px;">WEEKEND DAY</div>
+      <div style="display:flex;gap:10px;">
+        <button id="btn-saturday" onclick="setWeekendDay(6)" style="flex:1;padding:13px;border-radius:var(--r);font-family:var(--font-h);font-size:13px;font-weight:700;cursor:pointer;border:2px solid var(--iron-light);background:var(--iron);color:var(--chalk-dim);transition:all 0.2s;">Saturday</button>
+        <button id="btn-sunday"   onclick="setWeekendDay(0)" style="flex:1;padding:13px;border-radius:var(--r);font-family:var(--font-h);font-size:13px;font-weight:700;cursor:pointer;border:2px solid var(--iron-light);background:var(--iron);color:var(--chalk-dim);transition:all 0.2s;">Sunday</button>
+      </div>
+      <div style="font-size:11px;font-family:var(--font-m);color:var(--chalk-dim);margin-top:10px;text-align:center;" id="weekend-status"></div>
+    </div>
+
     <div class="section-title">Data summary</div>
     <div class="export-summary">
       <div class="export-stat-row"><span class="export-stat-key">Total workouts logged</span><span>47 sessions</span></div>
@@ -702,19 +714,50 @@ const MY_PROGRAM = {
 };
 
 // Determine today's workout based on a simple A/B rotation from a start date
-const PROGRAM_START = new Date('2026-03-03'); // Mon week 1 start
+const PROGRAM_START = new Date('2026-04-01'); // Tue Apr 1 2026 - new Tue/Thu/Weekend schedule
+
+function getWeekendDay() {
+  return lsLoad('il_weekend_day', 6); // 6=Saturday, 0=Sunday
+}
+
+function setWeekendDay(day) {
+  lsSave('il_weekend_day', day);
+  updateWeekendUI();
+  const cal = document.getElementById('prog-calendar');
+  if(cal) { cal.innerHTML=''; buildCalendar(); }
+  buildProgPlan();
+  showToast('Weekend day set to ' + (day===6?'Saturday':'Sunday'), 'success');
+}
+
+function updateWeekendUI() {
+  const day = getWeekendDay();
+  const btnSat = document.getElementById('btn-saturday');
+  const btnSun = document.getElementById('btn-sunday');
+  const status = document.getElementById('weekend-status');
+  if(btnSat) {
+    btnSat.style.background = day===6 ? 'var(--fire-glow)' : 'var(--iron)';
+    btnSat.style.borderColor = day===6 ? 'var(--fire)' : 'var(--iron-light)';
+    btnSat.style.color = day===6 ? 'var(--fire)' : 'var(--chalk-dim)';
+  }
+  if(btnSun) {
+    btnSun.style.background = day===0 ? 'var(--fire-glow)' : 'var(--iron)';
+    btnSun.style.borderColor = day===0 ? 'var(--fire)' : 'var(--iron-light)';
+    btnSun.style.color = day===0 ? 'var(--fire)' : 'var(--chalk-dim)';
+  }
+  if(status) status.textContent = 'Schedule: Tue · Thu · ' + (day===6?'Saturday':'Sunday');
+}
+
 function getTodayProgramDay() {
   const today = new Date();
   today.setHours(0,0,0,0);
-  const diff = Math.floor((today - PROGRAM_START) / (1000*60*60*24));
-  // workout days: Mon, Wed, Fri each week
-  const workoutSchedule = []; // list of {date, day:'A'|'B'}
+  const weekendDay = getWeekendDay();
+  const workoutSchedule = [];
   let dayType = 'A';
-  for(let i=0; i<200; i++) {
+  for(let i=0; i<400; i++) {
     const d = new Date(PROGRAM_START);
     d.setDate(PROGRAM_START.getDate() + i);
-    const dow = d.getDay(); // 0=Sun,1=Mon,...
-    if(dow===1||dow===3||dow===5) { // Mon, Wed, Fri
+    const dow = d.getDay();
+    if(dow===2 || dow===4 || dow===weekendDay) {
       workoutSchedule.push({date:new Date(d), day:dayType});
       dayType = dayType==='A'?'B':'A';
     }
@@ -756,7 +799,7 @@ window.addEventListener('DOMContentLoaded', () => {
   if(todayProg) {
     document.getElementById('log-day-meta').textContent = `Full Body ${todayProg.day==='A'?'Day A':'Day B'} · ${MY_PROGRAM.note}`;
   } else {
-    document.getElementById('log-day-meta').textContent = 'Rest day - next session scheduled Mon/Wed/Fri';
+    document.getElementById('log-day-meta').textContent = 'Rest day - next session: Tue, Thu or ' + (getWeekendDay()===6?'Saturday':'Sunday');
   }
   currentWorkout = loadOrInitTodayWorkout();
   document.getElementById('bw-date').valueAsDate = now;
@@ -770,6 +813,7 @@ window.addEventListener('DOMContentLoaded', () => {
   buildProgTemplates();
   buildCardioHistory();
   buildCustomWorkoutsList();
+  updateWeekendUI();
 });
 
 // ── TABS / VIEWS ──────────────────────────────────────
@@ -792,7 +836,7 @@ function renderWorkout() {
     c.innerHTML=`<div style="text-align:center;padding:32px 20px 20px;">
       <div style="font-size:36px;margin-bottom:10px;">😴</div>
       <div style="font-size:16px;font-weight:700;margin-bottom:4px;">Rest Day</div>
-      <div style="font-size:12px;font-family:var(--font-m);color:var(--chalk-dim);margin-bottom:24px;">Next scheduled workout: Mon, Wed or Fri</div>
+      <div style="font-size:12px;font-family:var(--font-m);color:var(--chalk-dim);margin-bottom:24px;">Next workout: Tue, Thu or weekend</div>
       <div style="font-size:11px;font-family:var(--font-m);color:var(--chalk-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;">Want to train anyway?</div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <button onclick="startExtraWorkout('A')" style="width:100%;padding:16px;background:var(--iron-card);border:1px solid var(--iron-light);border-radius:var(--r-lg);cursor:pointer;text-align:left;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--fire)'" onmouseout="this.style.borderColor='var(--iron-light)'">
@@ -1100,22 +1144,23 @@ function drawBwChart() {
 // ── PROGRAM / CALENDAR ────────────────────────────────
 function buildCalendar() {
   const c=document.getElementById('prog-calendar'); if(!c)return;
+  c.innerHTML='';
   const today=new Date(); today.setHours(0,0,0,0);
   const dayOfWeek=today.getDay();
   const daysOfWeek=['S','M','T','W','T','F','S'];
-  const workoutDaysOfWeek=[1,3,5]; // Mon, Wed, Fri
+  const weekendDay=getWeekendDay();
+  const workoutDaysOfWeek=[2,4,weekendDay]; // Tue, Thu, weekend
   for(let i=0;i<7;i++){
     const date=new Date(today); date.setDate(today.getDate()-dayOfWeek+i);
     const isToday=date.toDateString()===today.toDateString();
     const hasW=workoutDaysOfWeek.includes(i);
-    // compute A/B for this date
     let abLabel='';
     if(hasW){
       let count=0;
       const d=new Date(PROGRAM_START);
       while(d<=date){
-        const dow=d.getDay();
-        if(dow===1||dow===3||dow===5) count++;
+        const dow2=d.getDay();
+        if(dow2===2||dow2===4||dow2===weekendDay) count++;
         d.setDate(d.getDate()+1);
       }
       abLabel=count%2===1?'A':'B';
@@ -1166,7 +1211,7 @@ function buildProgTemplates() {
       </div>
       <div style="font-size:12px;color:var(--chalk-dim);margin-top:4px;">${MY_PROGRAM.note}</div>
       <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-        <span class="pill pill-steel">Mon · Wed · Fri</span>
+        <span class="pill pill-steel">Tue · Thu · Weekend</span>
         <span class="pill pill-steel">A/B alternating</span>
         <span class="pill pill-steel">5 exercises/day</span>
       </div>
