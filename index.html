@@ -606,7 +606,7 @@ canvas{display:block;}
 // ── DATA ──────────────────────────────────────────────
 const EXERCISES = [
   {name:'Bench Press',muscle:'Chest',secondary:'Triceps · Shoulders',type:'Barbell',difficulty:'Intermediate'},
-  {name:'Incline Bench Press',muscle:'Chest',secondary:'Upper Chest · Shoulders',type:'Barbell',difficulty:'Intermediate'},,
+  {name:'Incline Bench Press',muscle:'Chest',secondary:'Upper Chest · Shoulders',type:'Barbell',difficulty:'Intermediate'},
   {name:'Dumbbell Fly',muscle:'Chest',secondary:'Anterior Deltoid',type:'Dumbbell',difficulty:'Beginner'},
   {name:'Cable Crossover',muscle:'Chest',secondary:'Triceps',type:'Cable',difficulty:'Beginner'},
   {name:'Back Squat',muscle:'Legs',secondary:'Glutes · Core',type:'Barbell',difficulty:'Advanced'},
@@ -884,7 +884,7 @@ function renderWorkout() {
            <button class="log-btn" style="background:var(--iron-card);border:1px solid var(--iron-light);color:var(--chalk-dim);" onclick="logDurationSetAndRest(${ei})">LOG + ⏱</button>
          </div></div>`
       : `<div class="add-set-area"><div class="set-row">
-           <input type="number" id="kg-${ei}" placeholder="kg" step="0.5"/>
+           <input type="number" id="kg-${ei}" placeholder="kg" step="0.5" value="${ex.sets.length > 0 ? ex.sets[ex.sets.length-1].kg : ''}" style="text-align:center;"/>
            <input type="number" id="reps-${ei}" placeholder="${targetReps}"/>
            <button class="log-btn" onclick="logSet(${ei})">LOG</button>
            <button class="log-btn" style="background:var(--iron-card);border:1px solid var(--iron-light);color:var(--chalk-dim);" onclick="logSetAndRest(${ei})">LOG + ⏱</button>
@@ -905,7 +905,7 @@ function renderWorkout() {
         </div>
         <div style="text-align:right">
           <span class="pill pill-fire">${ex.muscle}</span>
-          <div style="font-size:11px;font-family:var(--font-m);color:${progressColor};margin-top:4px;">${progress}</div>
+          <div class="ex-progress" style="font-size:11px;font-family:var(--font-m);color:${progressColor};margin-top:4px;">${progress}</div>
         </div>
       </div>
       ${lastBar}
@@ -919,19 +919,75 @@ function renderWorkout() {
   });
 }
 
+function updateExerciseCard(ei) {
+  const ex = currentWorkout[ei];
+  if(!ex) return;
+  const targetSets = ex.targetSets || 3;
+  const targetReps = ex.targetReps || 10;
+  // Update set rows
+  const tbody = document.getElementById('sets-body-'+ei);
+  if(tbody) {
+    const setsLogged = ex.sets.length;
+    let rows = ex.sets.map((s,si) =>
+      '<tr>' +
+        '<td style="color:var(--chalk-faint)">' + (si+1) + '</td>' +
+        '<td>' + (ex.isDuration ? s.duration+'s' : s.kg+'kg') + '</td>' +
+        '<td>' + (ex.isDuration ? '-' : s.reps) + '</td>' +
+        '<td style="text-align:right">' + (ex.isDuration ? '✓' : Math.round(s.kg*s.reps)+' kg') + (s.pr?'<span class="pr-star"> ★ PR</span>':'') + '</td>' +
+      '</tr>'
+    ).join('');
+    // Add remaining placeholder rows
+    for(let i=setsLogged; i<targetSets; i++) {
+      rows += '<tr style="opacity:0.3"><td style="color:var(--chalk-faint)">'+(i+1)+'</td><td>-</td><td>'+(ex.isDuration?ex.duration+'s':targetReps)+'</td><td style="text-align:right">-</td></tr>';
+    }
+    tbody.innerHTML = rows;
+  }
+  // Update progress counter
+  const card = document.getElementById('ex-card-'+ei);
+  if(card) {
+    const setsLogged = ex.sets.length;
+    const progressEl = card.querySelector('.ex-progress');
+    if(progressEl) {
+      progressEl.textContent = setsLogged + '/' + targetSets + ' sets';
+      progressEl.style.color = setsLogged >= targetSets ? 'var(--green)' : 'var(--chalk-dim)';
+    }
+  }
+}
+
 function toggleAddSet(ei) {
   const el = document.getElementById('add-set-'+ei);
-  el.style.display = el.style.display==='none'?'block':'none';
+  const isHidden = el.style.display === 'none' || el.style.display === '';
+  el.style.display = isHidden ? 'block' : 'none';
+  // Pre-fill weight with last set's weight
+  if(isHidden) {
+    const ex = currentWorkout[ei];
+    if(ex && ex.sets.length > 0 && !ex.isDuration) {
+      const kgEl = document.getElementById('kg-'+ei);
+      if(kgEl && !kgEl.value) kgEl.value = ex.sets[ex.sets.length-1].kg;
+    }
+    // Focus the first input
+    const firstInput = el.querySelector('input');
+    if(firstInput) setTimeout(() => firstInput.focus(), 100);
+  }
 }
 
 function logSet(ei) {
-  const kg = parseFloat(document.getElementById('kg-'+ei).value);
-  const reps = parseInt(document.getElementById('reps-'+ei).value);
-  if(!kg||!reps) return;
+  const kgInput = document.getElementById('kg-'+ei);
+  const repsInput = document.getElementById('reps-'+ei);
+  const kg = parseFloat(kgInput ? kgInput.value : '');
+  const reps = parseInt(repsInput ? repsInput.value : '');
+  if(!kg || kg <= 0) { showToast('Enter a weight (kg)', 'fire'); return; }
+  if(!reps || reps <= 0) { showToast('Enter reps', 'fire'); return; }
   const isPR = checkAndUpdatePR(currentWorkout[ei].name, kg);
-  currentWorkout[ei].sets.push({kg,reps,pr:isPR});
+  currentWorkout[ei].sets.push({kg, reps, pr:isPR});
   saveCurrentWorkout();
-  renderWorkout();
+  // Update just this card without collapsing the form
+  updateExerciseCard(ei);
+  // Keep form open, clear reps, keep last weight for convenience
+  const kgEl = document.getElementById('kg-'+ei);
+  const repsEl = document.getElementById('reps-'+ei);
+  if(repsEl) repsEl.value = '';
+  if(repsEl) repsEl.focus();
   showToast(isPR ? '★ New PR! ' + kg + 'kg on ' + currentWorkout[ei].name : 'Set logged!', isPR?'fire':'success');
 }
 
@@ -941,10 +997,11 @@ function logSetAndRest(ei) {
 }
 
 function logDurationSet(ei) {
-  const dur = parseInt(document.getElementById('dur-'+ei).value) || 30;
+  const durInput = document.getElementById('dur-'+ei);
+  const dur = parseInt(durInput ? durInput.value : '30') || 30;
   currentWorkout[ei].sets.push({duration:dur});
   saveCurrentWorkout();
-  renderWorkout();
+  updateExerciseCard(ei);
   showToast('Set logged!','success');
 }
 
