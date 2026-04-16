@@ -129,6 +129,23 @@ select option{background:var(--iron-mid);}
 .photo-add-icon{font-size:20px;}
 .photo-add-lbl{font-size:9px;font-family:var(--font-m);color:var(--chalk-dim);}
 
+
+/* ── EDITABLE SET ROWS ── */
+.set-row-logged{display:flex;align-items:center;gap:0;border-top:1px solid rgba(255,255,255,0.05);padding:6px 0;}
+.set-row-logged.editing{background:rgba(232,82,26,0.06);border-radius:8px;padding:6px 6px;margin:2px 0;}
+.set-num-cell{font-size:11px;color:var(--chalk-faint);font-family:var(--font-m);min-width:18px;}
+.set-val{font-size:13px;font-family:var(--font-m);color:var(--chalk);flex:1;padding:0 4px;}
+.set-vol{font-size:11px;font-family:var(--font-m);color:var(--chalk-dim);min-width:48px;text-align:right;}
+.set-edit-btn{width:28px;height:28px;background:transparent;border:1px solid var(--iron-light);border-radius:6px;color:var(--chalk-dim);font-size:11px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-left:6px;}
+.set-edit-btn:active{background:var(--iron-light);}
+.set-del-btn{width:28px;height:28px;background:transparent;border:1px solid rgba(200,70,50,0.3);border-radius:6px;color:#e06050;font-size:14px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-left:4px;}
+.set-del-btn:active{background:rgba(200,70,50,0.15);}
+.set-inline-edit{display:flex;align-items:center;gap:6px;width:100%;padding:4px 0;}
+.set-inline-input{width:64px;background:var(--iron);border:1px solid var(--fire-border);border-radius:7px;padding:7px 8px;color:var(--chalk);font-family:var(--font-m);font-size:13px;text-align:center;}
+.set-inline-save{background:var(--fire);color:#fff;border:none;border-radius:7px;padding:7px 12px;font-family:var(--font-h);font-size:12px;font-weight:700;cursor:pointer;}
+.set-inline-cancel{background:var(--iron-card);border:1px solid var(--iron-light);color:var(--chalk-dim);border-radius:7px;padding:7px 10px;font-family:var(--font-h);font-size:12px;cursor:pointer;}
+.sets-tbl-wrap{width:100%;margin-bottom:4px;}
+
 /* ── TIMER OVERLAY ── */
 .timer-overlay{position:fixed;inset:0;background:rgba(10,10,10,0.92);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:100;}
 .timer-overlay.active{display:flex;}
@@ -831,165 +848,153 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>swit
 // ── RENDER WORKOUT ────────────────────────────────────
 function renderWorkout() {
   const c = document.getElementById('ex-container');
+  if(!c) return;
   c.innerHTML = '';
-  if(currentWorkout.length===0){
-    c.innerHTML=`<div style="text-align:center;padding:32px 20px 20px;">
-      <div style="font-size:36px;margin-bottom:10px;">😴</div>
-      <div style="font-size:16px;font-weight:700;margin-bottom:4px;">Rest Day</div>
-      <div style="font-size:12px;font-family:var(--font-m);color:var(--chalk-dim);margin-bottom:24px;">Next workout: Tue, Thu or weekend</div>
-      <div style="font-size:11px;font-family:var(--font-m);color:var(--chalk-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;">Want to train anyway?</div>
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        <button type="button" onclick="startExtraWorkout('A')" style="width:100%;padding:16px;background:var(--iron-card);border:1px solid var(--iron-light);border-radius:var(--r-lg);cursor:pointer;text-align:left;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--fire)'" onmouseout="this.style.borderColor='var(--iron-light)'">
-          <div style="font-size:14px;font-weight:700;color:var(--chalk);margin-bottom:6px;">Day A - Full Body</div>
-          <div style="display:flex;flex-wrap:wrap;gap:5px;">${MY_PROGRAM.dayA.exercises.map(e=>`<span style="font-size:10px;font-family:var(--font-m);background:var(--iron-light);color:var(--chalk-dim);padding:2px 8px;border-radius:5px;">${e.name}</span>`).join('')}</div>
-        </button>
-        <button type="button" onclick="startExtraWorkout('B')" style="width:100%;padding:16px;background:var(--iron-card);border:1px solid var(--iron-light);border-radius:var(--r-lg);cursor:pointer;text-align:left;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--fire)'" onmouseout="this.style.borderColor='var(--iron-light)'">
-          <div style="font-size:14px;font-weight:700;color:var(--chalk);margin-bottom:6px;">Day B - Full Body</div>
-          <div style="display:flex;flex-wrap:wrap;gap:5px;">${MY_PROGRAM.dayB.exercises.map(e=>`<span style="font-size:10px;font-family:var(--font-m);background:var(--iron-light);color:var(--chalk-dim);padding:2px 8px;border-radius:5px;">${e.name}</span>`).join('')}</div>
-        </button>
-        <button type="button" onclick="startCustomWorkout()" style="width:100%;padding:14px;background:transparent;border:1.5px dashed var(--iron-light);border-radius:var(--r-lg);cursor:pointer;color:var(--chalk-dim);font-size:13px;font-family:var(--font-h);font-weight:700;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--fire)';this.style.color='var(--fire)'" onmouseout="this.style.borderColor='var(--iron-light)';this.style.color='var(--chalk-dim)'">
-          + Start custom workout
-        </button>
-      </div>
-    </div>`;
+  if(currentWorkout.length === 0) {
+    const wday = getWeekendDay ? getWeekendDay() : 6;
+    c.innerHTML = '<div style="text-align:center;padding:32px 20px 20px;">'
+      + '<div style="font-size:36px;margin-bottom:10px;">😴</div>'
+      + '<div style="font-size:16px;font-weight:700;margin-bottom:4px;">Rest Day</div>'
+      + '<div style="font-size:12px;font-family:var(--font-m);color:var(--chalk-dim);margin-bottom:24px;">Next workout: Tue, Thu or weekend</div>'
+      + '<div style="font-size:11px;font-family:var(--font-m);color:var(--chalk-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;">Want to train anyway?</div>'
+      + '<div style="display:flex;flex-direction:column;gap:10px;">'
+      + '<button type="button" onclick="startExtraWorkout(\'A\')" style="width:100%;padding:16px;background:var(--iron-card);border:1px solid var(--iron-light);border-radius:var(--r-lg);cursor:pointer;text-align:left;"><div style="font-size:14px;font-weight:700;color:var(--chalk);margin-bottom:6px;">Day A - Full Body</div></button>'
+      + '<button type="button" onclick="startExtraWorkout(\'B\')" style="width:100%;padding:16px;background:var(--iron-card);border:1px solid var(--iron-light);border-radius:var(--r-lg);cursor:pointer;text-align:left;"><div style="font-size:14px;font-weight:700;color:var(--chalk);margin-bottom:6px;">Day B - Full Body</div></button>'
+      + '<button type="button" onclick="startCustomWorkout()" style="width:100%;padding:14px;background:transparent;border:1.5px dashed var(--iron-light);border-radius:var(--r-lg);cursor:pointer;color:var(--chalk-dim);font-size:13px;font-family:var(--font-h);font-weight:700;">+ Start custom workout</button>'
+      + '</div></div>';
     return;
   }
   currentWorkout.forEach((ex, ei) => {
-    const d = document.createElement('div');
-    d.className = 'ex-card';
-    d.id = 'ex-card-'+ei;
-    const setsLogged = ex.sets.length;
-    const targetSets = ex.targetSets || 3;
-    const targetReps = ex.targetReps || 10;
-    const targetLabel = ex.isDuration
-      ? `${targetSets} × ${ex.duration}s`
-      : `${targetSets} × ${targetReps} reps`;
-    const progress = `${setsLogged}/${targetSets} sets`;
-    const progressColor = setsLogged>=targetSets ? 'var(--green)' : 'var(--chalk-dim)';
-    let rows = ex.sets.map((s,si) => `
-      <tr>
-        <td style="color:var(--chalk-faint)">${si+1}</td>
-        <td>${ex.isDuration ? s.duration+'s' : s.kg+'kg'}</td>
-        <td>${ex.isDuration ? '—' : s.reps}</td>
-        <td style="text-align:right">${ex.isDuration ? '✓' : Math.round(s.kg*s.reps)+' kg'}${s.pr?'<span class="pr-star"> ★ PR</span>':''}</td>
-      </tr>`).join('');
-    // Empty set placeholders
-    for(let i=setsLogged; i<targetSets; i++){
-      rows += `<tr style="opacity:0.3"><td style="color:var(--chalk-faint)">${i+1}</td><td>—</td><td>${ex.isDuration?ex.duration+'s':targetReps}</td><td style="text-align:right">—</td></tr>`;
-    }
-    const addForm = ex.isDuration
-      ? `<div class="add-set-area"><div class="set-row">
-           <input type="number" id="dur-${ei}" placeholder="${ex.duration}s" value="${ex.duration}" inputmode="numeric" autocomplete="off" style="max-width:80px;text-align:center;padding:8px 6px;"/>
-           <button type="button" class="log-btn" onclick="logDurationSet(${ei})">LOG SET</button>
-           <button type="button" class="log-btn" style="background:var(--iron-card);border:1px solid var(--iron-light);color:var(--chalk-dim);" onclick="logDurationSetAndRest(${ei})">LOG + ⏱</button>
-         </div></div>`
-      : `<div class="add-set-area"><div class="set-row">
-           <input type="number" id="kg-${ei}" placeholder="kg" step="0.5" inputmode="decimal" autocomplete="off" style="text-align:center;"/>
-           <input type="number" id="reps-${ei}" placeholder="${targetReps}" inputmode="numeric" autocomplete="off"/>
-           <button type="button" class="log-btn" onclick="logSet(${ei})">LOG</button>
-           <button type="button" class="log-btn" style="background:var(--iron-card);border:1px solid var(--iron-light);color:var(--chalk-dim);" onclick="logSetAndRest(${ei})">LOG + ⏱</button>
-         </div></div>`;
-    // Last session data for this exercise
-    const lastSess = getLastSessionData(ex.name);
-    const lastBar = lastSess
-      ? '<div class="last-session-bar"><span class="last-session-icon">⟳</span><span class="last-session-text">Last session</span><span class="last-session-sets">' + lastSess + '</span></div>'
-      : '';
-    d.innerHTML = `
-      <div class="ex-top">
-        <div style="flex:1;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div class="ex-name">${ex.name}</div>
-            <button type="button" onclick="openInfoModal('${ex.name.replace(/'/g,"\\'")}','${ex.muscle}')" style="background:var(--iron-light);border:none;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;color:var(--chalk-dim);flex-shrink:0;" title="How to do this exercise">?</button>
-          </div>
-          <div style="font-size:11px;font-family:var(--font-m);color:var(--chalk-dim);margin-top:2px;">${targetLabel}</div>
-        </div>
-        <div style="text-align:right">
-          <span class="pill pill-fire">${ex.muscle}</span>
-          <div class="ex-progress" style="font-size:11px;font-family:var(--font-m);color:${progressColor};margin-top:4px;">${progress}</div>
-        </div>
-      </div>
-      ${lastBar}
-      <table class="sets-tbl">
-        <thead><tr><th>SET</th><th>${ex.isDuration?'TIME':'KG'}</th><th>${ex.isDuration?'TYPE':'REPS'}</th><th style="text-align:right">VOL</th></tr></thead>
-        <tbody id="sets-body-${ei}">${rows}</tbody>
-      </table>
-      <div class="add-set-toggle" onclick="toggleAddSet(${ei})">＋ log set</div>
-      <div id="add-set-${ei}" style="display:none;">${addForm}</div>`;
-    c.appendChild(d);
+    const card = document.createElement('div');
+    card.className = 'ex-card';
+    card.id = 'ex-card-' + ei;
+    c.appendChild(card);
+    renderExCard(ei);
   });
 }
 
-function updateExerciseCard(ei) {
+function renderExCard(ei) {
+  const card = document.getElementById('ex-card-' + ei);
+  if(!card) return;
   const ex = currentWorkout[ei];
   if(!ex) return;
   const targetSets = ex.targetSets || 3;
   const targetReps = ex.targetReps || 10;
-  // Update set rows
-  const tbody = document.getElementById('sets-body-'+ei);
-  if(tbody) {
-    const setsLogged = ex.sets.length;
-    let rows = ex.sets.map((s,si) =>
-      '<tr>' +
-        '<td style="color:var(--chalk-faint)">' + (si+1) + '</td>' +
-        '<td>' + (ex.isDuration ? s.duration+'s' : s.kg+'kg') + '</td>' +
-        '<td>' + (ex.isDuration ? '-' : s.reps) + '</td>' +
-        '<td style="text-align:right">' + (ex.isDuration ? '✓' : Math.round(s.kg*s.reps)+' kg') + (s.pr?'<span class="pr-star"> ★ PR</span>':'') + '</td>' +
-      '</tr>'
-    ).join('');
-    // Add remaining placeholder rows
-    for(let i=setsLogged; i<targetSets; i++) {
-      rows += '<tr style="opacity:0.3"><td style="color:var(--chalk-faint)">'+(i+1)+'</td><td>-</td><td>'+(ex.isDuration?ex.duration+'s':targetReps)+'</td><td style="text-align:right">-</td></tr>';
-    }
-    tbody.innerHTML = rows;
+  const setsLogged = ex.sets.length;
+  const targetLabel = ex.isDuration ? (targetSets + ' x ' + ex.duration + 's') : (targetSets + ' x ' + targetReps + ' reps');
+  const progressColor = setsLogged >= targetSets ? 'var(--green)' : 'var(--chalk-dim)';
+  const lastSess = getLastSessionData(ex.name);
+  const lastBar = lastSess
+    ? '<div class="last-session-bar"><span class="last-session-icon">&#x27F3;</span><span class="last-session-text">Last session</span><span class="last-session-sets">' + lastSess + '</span></div>'
+    : '';
+
+  // Build set rows with edit/delete buttons
+  let setRowsHTML = '';
+  ex.sets.forEach((set, si) => {
+    const volStr = ex.isDuration ? '&#10003;' : (Math.round(set.kg * set.reps) + ' kg');
+    const valStr = ex.isDuration ? set.duration + 's' : (set.kg + 'kg / ' + set.reps + ' reps');
+    const prBadge = set.pr ? '<span class="pr-star"> &#9733; PR</span>' : '';
+    setRowsHTML += '<div class="set-row-logged" id="set-row-' + ei + '-' + si + '">'
+      + '<span class="set-num-cell">' + (si+1) + '</span>'
+      + '<span class="set-val">' + valStr + prBadge + '</span>'
+      + '<span class="set-vol">' + volStr + '</span>'
+      + '<button type="button" class="set-edit-btn" onclick="startEditSet(' + ei + ',' + si + ')" title="Edit">&#9998;</button>'
+      + '<button type="button" class="set-del-btn" onclick="deleteSet(' + ei + ',' + si + ')" title="Delete">&#215;</button>'
+      + '</div>';
+  });
+
+  // Placeholder rows for remaining sets
+  for (let i = setsLogged; i < targetSets; i++) {
+    const placeholderVal = ex.isDuration ? ex.duration + 's' : targetReps + ' reps';
+    setRowsHTML += '<div style="display:flex;align-items:center;gap:0;border-top:1px solid rgba(255,255,255,0.04);padding:6px 0;opacity:0.3;">'
+      + '<span class="set-num-cell">' + (i+1) + '</span>'
+      + '<span class="set-val" style="font-family:var(--font-m);font-size:13px;color:var(--chalk);">- / -</span>'
+      + '<span class="set-vol" style="font-size:11px;font-family:var(--font-m);color:var(--chalk-dim);">-</span>'
+      + '</div>';
   }
-  // Update progress counter
-  const card = document.getElementById('ex-card-'+ei);
-  if(card) {
-    const setsLogged = ex.sets.length;
-    const progressEl = card.querySelector('.ex-progress');
-    if(progressEl) {
-      progressEl.textContent = setsLogged + '/' + targetSets + ' sets';
-      progressEl.style.color = setsLogged >= targetSets ? 'var(--green)' : 'var(--chalk-dim)';
-    }
+
+  // Add new set form
+  const addFormId = 'add-set-' + ei;
+  let addFormHTML = '';
+  if (ex.isDuration) {
+    const lastDur = ex.sets.length > 0 ? ex.sets[ex.sets.length-1].duration : ex.duration;
+    addFormHTML = '<div id="' + addFormId + '" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">'
+      + '<div class="set-row" style="gap:8px;">'
+      + '<input type="number" id="dur-' + ei + '" value="' + lastDur + '" inputmode="numeric" autocomplete="off" style="width:80px;text-align:center;padding:8px 6px;"/>'
+      + '<span style="font-size:12px;color:var(--chalk-dim);font-family:var(--font-m);">seconds</span>'
+      + '<button type="button" class="log-btn" onclick="logDurationSet(' + ei + ')">LOG</button>'
+      + '<button type="button" class="log-btn" style="background:var(--iron-card);border:1px solid var(--iron-light);color:var(--chalk-dim);" onclick="logDurationSetAndRest(' + ei + ')">LOG + &#x23F1;</button>'
+      + '</div></div>';
+  } else {
+    const lastKg = ex.sets.length > 0 ? ex.sets[ex.sets.length-1].kg : '';
+    addFormHTML = '<div id="' + addFormId + '" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);">'
+      + '<div class="set-row" style="gap:8px;">'
+      + '<input type="number" id="kg-' + ei + '" placeholder="kg" value="' + lastKg + '" step="0.5" inputmode="decimal" autocomplete="off" style="text-align:center;"/>'
+      + '<input type="number" id="reps-' + ei + '" placeholder="reps" inputmode="numeric" autocomplete="off" style="text-align:center;"/>'
+      + '<button type="button" class="log-btn" onclick="logSet(' + ei + ')">LOG</button>'
+      + '<button type="button" class="log-btn" style="background:var(--iron-card);border:1px solid var(--iron-light);color:var(--chalk-dim);" onclick="logSetAndRest(' + ei + ')">LOG + &#x23F1;</button>'
+      + '</div></div>';
   }
+
+  card.innerHTML = '<div class="ex-top">'
+    + '<div style="flex:1;">'
+    + '<div style="display:flex;align-items:center;gap:8px;">'
+    + '<div class="ex-name">' + ex.name + '</div>'
+    + '<button type="button" onclick="openInfoModalByIdx(' + ei + ')" style="background:var(--iron-light);border:none;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;color:var(--chalk-dim);flex-shrink:0;" title="How to do this exercise">?</button>'
+    + '</div>'
+    + '<div style="font-size:11px;font-family:var(--font-m);color:var(--chalk-dim);margin-top:2px;">' + targetLabel + '</div>'
+    + '</div>'
+    + '<div style="text-align:right;">'
+    + '<span class="pill pill-fire">' + ex.muscle + '</span>'
+    + '<div class="ex-progress" style="font-size:11px;font-family:var(--font-m);color:' + progressColor + ';margin-top:4px;">' + setsLogged + '/' + targetSets + ' sets</div>'
+    + '</div>'
+    + '</div>'
+    + lastBar
+    + '<div class="sets-tbl-wrap">' + setRowsHTML + '</div>'
+    + '<button type="button" class="add-set-toggle" onclick="toggleAddSet(' + ei + ')" style="border:none;background:none;color:var(--chalk-dim);font-size:11px;font-family:var(--font-m);cursor:pointer;padding:6px 0;display:inline-flex;align-items:center;gap:4px;">&#xFF0B; log set</button>'
+    + addFormHTML;
 }
+
+
+function updateExerciseCard(ei) {
+  renderExCard(ei);
+}
+
 
 function toggleAddSet(ei) {
-  const el = document.getElementById('add-set-'+ei);
+  const el = document.getElementById('add-set-' + ei);
+  if(!el) return;
   const isHidden = el.style.display === 'none' || el.style.display === '';
   el.style.display = isHidden ? 'block' : 'none';
-  if(isHidden) {
-    // Pre-fill kg with last logged weight for this exercise
-    const ex = currentWorkout[ei];
-    if(ex && ex.sets.length > 0 && !ex.isDuration) {
-      const kgEl = document.getElementById('kg-'+ei);
-      if(kgEl) kgEl.value = ex.sets[ex.sets.length-1].kg;
-    }
-    // Clear reps field
-    const repsEl = document.getElementById('reps-'+ei);
-    if(repsEl) { repsEl.value = ''; }
-  }
 }
 
+
 function logSet(ei) {
-  const kgInput = document.getElementById('kg-'+ei);
-  const repsInput = document.getElementById('reps-'+ei);
-  const kg = parseFloat(kgInput ? kgInput.value : '');
-  const reps = parseInt(repsInput ? repsInput.value : '');
-  if(!kg || kg <= 0) { showToast('Enter a weight (kg)', 'fire'); return; }
+  const kgInput = document.getElementById('kg-' + ei);
+  const repsInput = document.getElementById('reps-' + ei);
+  if(!kgInput || !repsInput) return;
+  const kg = parseFloat(kgInput.value);
+  const reps = parseInt(repsInput.value);
+  if(!kg || kg <= 0) { showToast('Enter weight in kg', 'fire'); return; }
   if(!reps || reps <= 0) { showToast('Enter reps', 'fire'); return; }
   const isPR = checkAndUpdatePR(currentWorkout[ei].name, kg);
-  currentWorkout[ei].sets.push({kg, reps, pr:isPR});
+  currentWorkout[ei].sets.push({kg: kg, reps: reps, pr: isPR});
   saveCurrentWorkout();
-  // Update just this card without collapsing the form
-  updateExerciseCard(ei);
-  // Keep form open, clear reps, keep last weight for convenience
-  const kgEl = document.getElementById('kg-'+ei);
-  const repsEl = document.getElementById('reps-'+ei);
-  if(repsEl) repsEl.value = '';
-  if(repsEl) repsEl.focus();
-  showToast(isPR ? '★ New PR! ' + kg + 'kg on ' + currentWorkout[ei].name : 'Set logged!', isPR?'fire':'success');
+  // Re-render just this card (keeps form open state)
+  const formWasOpen = document.getElementById('add-set-'+ei) && document.getElementById('add-set-'+ei).style.display !== 'none';
+  renderExCard(ei);
+  // Re-open form and pre-fill weight, clear reps
+  if(formWasOpen) {
+    const form = document.getElementById('add-set-' + ei);
+    if(form) form.style.display = 'block';
+    const newKgEl = document.getElementById('kg-' + ei);
+    const newRepsEl = document.getElementById('reps-' + ei);
+    if(newKgEl) newKgEl.value = kg;
+    if(newRepsEl) newRepsEl.value = '';
+  }
+  showToast(isPR ? '★ New PR! ' + kg + 'kg' : 'Set logged!', isPR ? 'fire' : 'success');
 }
+
 
 function logSetAndRest(ei) {
   logSet(ei);
@@ -997,13 +1002,19 @@ function logSetAndRest(ei) {
 }
 
 function logDurationSet(ei) {
-  const durInput = document.getElementById('dur-'+ei);
-  const dur = parseInt(durInput ? durInput.value : '30') || 30;
-  currentWorkout[ei].sets.push({duration:dur});
+  const durInput = document.getElementById('dur-' + ei);
+  const dur = parseInt(durInput ? durInput.value : '') || 30;
+  currentWorkout[ei].sets.push({duration: dur});
   saveCurrentWorkout();
-  updateExerciseCard(ei);
-  showToast('Set logged!','success');
+  const formWasOpen = document.getElementById('add-set-'+ei) && document.getElementById('add-set-'+ei).style.display !== 'none';
+  renderExCard(ei);
+  if(formWasOpen) {
+    const form = document.getElementById('add-set-' + ei);
+    if(form) form.style.display = 'block';
+  }
+  showToast('Set logged!', 'success');
 }
+
 
 function logDurationSetAndRest(ei) {
   logDurationSet(ei);
@@ -1088,6 +1099,69 @@ function addExercise(name, muscle, type) {
   showToast(name+' added to workout','success');
   // scroll to new exercise
   setTimeout(()=>{ const el=document.getElementById('ex-card-'+(currentWorkout.length-1)); if(el) el.scrollIntoView({behavior:'smooth'}); },100);
+}
+
+
+// ── SET EDITING & DELETION ────────────────────────────
+function deleteSet(ei, si) {
+  currentWorkout[ei].sets.splice(si, 1);
+  // Re-check PR for this exercise after deletion
+  const ex = currentWorkout[ei];
+  if(ex.sets.length > 0 && !ex.isDuration) {
+    const maxKg = Math.max(...ex.sets.map(s => s.kg));
+    checkAndUpdatePR(ex.name, maxKg);
+  }
+  saveCurrentWorkout();
+  renderExCard(ei);
+  showToast('Set deleted', 'success');
+}
+
+function startEditSet(ei, si) {
+  const ex = currentWorkout[ei];
+  const set = ex.sets[si];
+  const rowEl = document.getElementById('set-row-' + ei + '-' + si);
+  if(!rowEl) return;
+  if(ex.isDuration) {
+    rowEl.innerHTML = '<div class="set-inline-edit">'
+      + '<span class="set-num-cell">' + (si+1) + '</span>'
+      + '<input type="number" id="edit-dur-' + ei + '-' + si + '" value="' + set.duration + '" inputmode="numeric" class="set-inline-input" style="width:72px;"/>'
+      + '<span style="font-size:12px;color:var(--chalk-dim);">sec</span>'
+      + '<button type="button" class="set-inline-save" onclick="saveEditSet(' + ei + ',' + si + ')">SAVE</button>'
+      + '<button type="button" class="set-inline-cancel" onclick="renderExCard(' + ei + ')">CANCEL</button>'
+      + '</div>';
+  } else {
+    rowEl.innerHTML = '<div class="set-inline-edit">'
+      + '<span class="set-num-cell">' + (si+1) + '</span>'
+      + '<input type="number" id="edit-kg-' + ei + '-' + si + '" value="' + set.kg + '" step="0.5" inputmode="decimal" class="set-inline-input"/>'
+      + '<span style="font-size:12px;color:var(--chalk-dim);">kg</span>'
+      + '<input type="number" id="edit-reps-' + ei + '-' + si + '" value="' + set.reps + '" inputmode="numeric" class="set-inline-input"/>'
+      + '<span style="font-size:12px;color:var(--chalk-dim);">reps</span>'
+      + '<button type="button" class="set-inline-save" onclick="saveEditSet(' + ei + ',' + si + ')">SAVE</button>'
+      + '<button type="button" class="set-inline-cancel" onclick="renderExCard(' + ei + ')">&#x2715;</button>'
+      + '</div>';
+  }
+  rowEl.classList.add('editing');
+}
+
+function saveEditSet(ei, si) {
+  const ex = currentWorkout[ei];
+  if(ex.isDuration) {
+    const durEl = document.getElementById('edit-dur-' + ei + '-' + si);
+    const dur = parseInt(durEl ? durEl.value : '') || 30;
+    ex.sets[si].duration = dur;
+  } else {
+    const kgEl = document.getElementById('edit-kg-' + ei + '-' + si);
+    const repsEl = document.getElementById('edit-reps-' + ei + '-' + si);
+    const kg = parseFloat(kgEl ? kgEl.value : '');
+    const reps = parseInt(repsEl ? repsEl.value : '');
+    if(!kg || kg <= 0) { showToast('Enter weight', 'fire'); return; }
+    if(!reps || reps <= 0) { showToast('Enter reps', 'fire'); return; }
+    const isPR = checkAndUpdatePR(ex.name, kg);
+    ex.sets[si] = {kg: kg, reps: reps, pr: isPR};
+  }
+  saveCurrentWorkout();
+  renderExCard(ei);
+  showToast('Set updated', 'success');
 }
 
 // ── TIMER ─────────────────────────────────────────────
@@ -1542,6 +1616,12 @@ function removePhoto(idx) {
   renderPhotoStrip();
 }
 
+
+function openInfoModalByIdx(ei) {
+  const ex = currentWorkout[ei];
+  if(ex) openInfoModal(ex.name, ex.muscle);
+}
+
 // ── EXERCISE INFO MODAL ────────────────────────────
 const EXERCISE_INFO = {
   'Barbell Squat':       { primary:'Quads · Glutes', secondary:'Hamstrings · Core · Lower Back', steps:['Stand with bar on upper traps, feet shoulder-width apart, toes slightly out.','Brace your core and take a big breath. Keep chest tall.','Push knees out in line with toes as you descend.','Squat until thighs are parallel to floor (or lower).','Drive through heels, squeeze glutes at the top.'], tip:'If your heels lift, widen stance or elevate them slightly. Keep the bar over mid-foot throughout.' },
@@ -1829,4 +1909,4 @@ function showToast(msg, cls='') {
 }
 </script>
 </body>
-</html>
+    + '<button type="button" onclick="openInfoModalByIdx(' + ei + ')" style="background:var(--iron-light);border:none;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;color:var(--chalk-dim);flex-shrink:0;" title="How to do this exercise">?</button>'
