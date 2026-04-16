@@ -392,10 +392,14 @@ canvas{display:block;}
       <div class="cf-row">
         <div>
           <div class="cf-label">TYPE</div>
-          <select id="cardio-type">
+          <select id="cardio-type" onchange="toggleCustomCardioType(this)">
             <option>Running</option><option>Cycling</option><option>Rowing</option>
             <option>Swimming</option><option>Jump Rope</option><option>Stairmaster</option><option>HIIT</option>
+            <option>Hiking</option><option>Boxing</option><option>Pilates</option><option>Yoga</option>
+            <option>Basketball</option><option>Tennis</option><option>Football</option>
+            <option value="__custom__">+ Custom...</option>
           </select>
+          <input type="text" id="cardio-type-custom" placeholder="Enter activity type" style="display:none;margin-top:6px;" autocomplete="off"/>
         </div>
         <div>
           <div class="cf-label">DURATION (min)</div>
@@ -1367,8 +1371,25 @@ function buildCardioHistory() {
     </div>`).join('');
 }
 
+
+function toggleCustomCardioType(sel) {
+  const customInput = document.getElementById('cardio-type-custom');
+  if(!customInput) return;
+  if(sel.value === '__custom__') {
+    customInput.style.display = 'block';
+    customInput.focus();
+  } else {
+    customInput.style.display = 'none';
+    customInput.value = '';
+  }
+}
+
 function logCardio() {
-  const type=document.getElementById('cardio-type').value;
+  const typeSelect = document.getElementById('cardio-type');
+  const customInput = document.getElementById('cardio-type-custom');
+  const type = typeSelect.value === '__custom__'
+    ? (customInput.value.trim() || 'Custom')
+    : typeSelect.value;
   const dur=document.getElementById('cardio-dur').value;
   const dist=document.getElementById('cardio-dist').value;
   const cal=document.getElementById('cardio-cal').value;
@@ -1381,6 +1402,11 @@ function logCardio() {
   document.getElementById('cardio-dist').value='';
   document.getElementById('cardio-cal').value='';
   document.getElementById('cardio-notes').value='';
+  if(document.getElementById('cardio-type-custom')) {
+    document.getElementById('cardio-type-custom').value='';
+    document.getElementById('cardio-type-custom').style.display='none';
+    document.getElementById('cardio-type').value='Running';
+  }
   showToast(type+' session logged!','success');
 }
 
