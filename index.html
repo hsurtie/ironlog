@@ -7,6 +7,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
+*::-webkit-scrollbar{display:none;}
+*{scrollbar-width:none;-ms-overflow-style:none;}
 :root{
   --iron:#161616;--iron-mid:#222;--iron-card:#2a2a2a;--iron-light:#383838;--iron-border:#444;
   --chalk:#f0ece6;--chalk-dim:#a09890;--chalk-faint:#5a5450;
@@ -34,7 +36,7 @@ body{font-family:var(--font-h);color:var(--chalk);-webkit-font-smoothing:antiali
 
 /* ── VIEWS ── */
 .view{display:none;}
-.view.active{display:block;flex:1;overflow-y:scroll;-webkit-overflow-scrolling:touch;padding:18px 18px 160px;min-height:0;}
+.view.active{display:block;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 18px 160px;min-height:0;}
 
 /* ── COMMON ── */
 .section-title{font-size:11px;font-weight:700;color:var(--chalk-dim);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:12px;font-family:var(--font-m);}
@@ -134,6 +136,7 @@ select option{background:var(--iron-mid);}
 .set-row-logged{display:flex;align-items:center;gap:0;border-top:1px solid rgba(255,255,255,0.05);padding:6px 0;}
 .set-row-logged.editing{background:rgba(232,82,26,0.06);border-radius:8px;padding:6px 6px;margin:2px 0;}
 .set-num-cell{font-size:11px;color:var(--chalk-faint);font-family:var(--font-m);min-width:18px;}
+.set-prev{font-size:12px;font-family:var(--font-m);color:var(--chalk-faint);min-width:72px;padding:0 4px;}
 .set-val{font-size:13px;font-family:var(--font-m);color:var(--chalk);flex:1;padding:0 4px;}
 .set-vol{font-size:11px;font-family:var(--font-m);color:var(--chalk-dim);min-width:48px;text-align:right;}
 .set-edit-btn{width:28px;height:28px;background:transparent;border:1px solid var(--iron-light);border-radius:6px;color:var(--chalk-dim);font-size:11px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-left:6px;}
@@ -892,16 +895,23 @@ function renderExCard(ei) {
     ? '<div class="last-session-bar"><span class="last-session-icon">&#x27F3;</span><span class="last-session-text">Last session</span><span class="last-session-sets">' + lastSess + '</span></div>'
     : '';
 
-  // Build set rows with edit/delete buttons
+  // Build set rows with prev weight + edit/delete buttons
+  const prevSets = getLastSessionSets(ex.name);
   let setRowsHTML = '';
   ex.sets.forEach((set, si) => {
     const volStr = ex.isDuration ? '&#10003;' : (Math.round(set.kg * set.reps) + ' kg');
     const valStr = ex.isDuration ? set.duration + 's' : (set.kg + 'kg / ' + set.reps + ' reps');
     const prBadge = set.pr ? '<span class="pr-star"> &#9733; PR</span>' : '';
+    const prevSet = prevSets[si];
+    const prevStr = ex.isDuration
+      ? (prevSet && prevSet.duration ? prevSet.duration + 's' : '-')
+      : (prevSet && prevSet.kg ? prevSet.kg + 'x' + prevSet.reps : '-');
+    const isHeavier = !ex.isDuration && prevSet && prevSet.kg && set.kg > prevSet.kg;
+    const prevColor = isHeavier ? 'var(--green)' : 'var(--chalk-faint)';
     setRowsHTML += '<div class="set-row-logged" id="set-row-' + ei + '-' + si + '">'
       + '<span class="set-num-cell">' + (si+1) + '</span>'
+      + '<span class="set-prev" style="color:' + prevColor + ';">' + prevStr + '</span>'
       + '<span class="set-val">' + valStr + prBadge + '</span>'
-      + '<span class="set-vol">' + volStr + '</span>'
       + '<button type="button" class="set-edit-btn" onclick="startEditSet(' + ei + ',' + si + ')" title="Edit">&#9998;</button>'
       + '<button type="button" class="set-del-btn" onclick="deleteSet(' + ei + ',' + si + ')" title="Delete">&#215;</button>'
       + '</div>';
@@ -909,11 +919,16 @@ function renderExCard(ei) {
 
   // Placeholder rows for remaining sets
   for (let i = setsLogged; i < targetSets; i++) {
-    const placeholderVal = ex.isDuration ? ex.duration + 's' : targetReps + ' reps';
-    setRowsHTML += '<div style="display:flex;align-items:center;gap:0;border-top:1px solid rgba(255,255,255,0.04);padding:6px 0;opacity:0.3;">'
-      + '<span class="set-num-cell">' + (i+1) + '</span>'
-      + '<span class="set-val" style="font-family:var(--font-m);font-size:13px;color:var(--chalk);">- / -</span>'
-      + '<span class="set-vol" style="font-size:11px;font-family:var(--font-m);color:var(--chalk-dim);">-</span>'
+    const prevSet = prevSets[i];
+    const prevStr = ex.isDuration
+      ? (prevSet && prevSet.duration ? prevSet.duration + 's' : '-')
+      : (prevSet && prevSet.kg ? prevSet.kg + 'x' + prevSet.reps : '-');
+    setRowsHTML += '<div style="display:flex;align-items:center;gap:0;border-top:1px solid rgba(255,255,255,0.04);padding:6px 0;">'
+      + '<span class="set-num-cell" style="opacity:0.35;">' + (i+1) + '</span>'
+      + '<span class="set-prev" style="color:var(--steel);opacity:0.7;">' + prevStr + '</span>'
+      + '<span class="set-val" style="font-family:var(--font-m);font-size:13px;color:var(--chalk);opacity:0.25;">-</span>'
+      + '<span style="width:28px;margin-left:6px;"></span>'
+      + '<span style="width:28px;margin-left:4px;"></span>'
       + '</div>';
   }
 
@@ -940,6 +955,7 @@ function renderExCard(ei) {
       + '</div></div>';
   }
 
+  // sets header built inline
   card.innerHTML = '<div class="ex-top">'
     + '<div style="flex:1;">'
     + '<div style="display:flex;align-items:center;gap:8px;">'
@@ -954,7 +970,15 @@ function renderExCard(ei) {
     + '</div>'
     + '</div>'
     + lastBar
-    + '<div class="sets-tbl-wrap">' + setRowsHTML + '</div>'
+    + '<div class="sets-tbl-wrap">'
+  + '<div style="display:flex;align-items:center;padding:0 0 4px 0;border-bottom:1px solid rgba(255,255,255,0.07);">'
+  + '<span class="set-num-cell" style="font-size:9px;color:var(--chalk-faint);font-family:var(--font-m);letter-spacing:0.5px;">SET</span>'
+  + '<span class="set-prev" style="font-size:9px;color:var(--chalk-faint);font-family:var(--font-m);letter-spacing:0.5px;">PREV</span>'
+  + '<span class="set-val" style="font-size:9px;color:var(--chalk-faint);font-family:var(--font-m);letter-spacing:0.5px;">KG / REPS</span>'
+  + '<span style="width:28px;margin-left:6px;"></span>'
+  + '<span style="width:28px;margin-left:4px;"></span>'
+  + '</div>'
+  + setRowsHTML + '</div>'
     + '<button type="button" class="add-set-toggle" onclick="toggleAddSet(' + ei + ')" style="border:none;background:none;color:var(--chalk-dim);font-size:11px;font-family:var(--font-m);cursor:pointer;padding:6px 0;display:inline-flex;align-items:center;gap:4px;">&#xFF0B; log set</button>'
     + addFormHTML;
 }
@@ -1590,6 +1614,19 @@ function startCustomWorkoutById(idx) {
 
 
 // ── LAST SESSION REFERENCE ────────────────────────
+
+function getLastSessionSets(exName) {
+  // Returns array of {kg, reps} from the last session for this exercise
+  const history = lsLoad(LS.WORKOUT_HISTORY, []);
+  for(const session of history) {
+    const ex = session.exercises && session.exercises.find(e => e.name === exName);
+    if(ex && ex.sets && ex.sets.length > 0) {
+      return ex.sets; // array of {kg, reps} or {duration}
+    }
+  }
+  return [];
+}
+
 function getLastSessionData(exName) {
   const history = lsLoad(LS.WORKOUT_HISTORY, []);
   for(const session of history) {
